@@ -3,9 +3,9 @@
 ## 1. Project Overview & Architecture
 Platform showcase dan sharing gambar AI-generated dengan sistem kurasi/approval admin.
 - **Project Name**: Kato
-- **Paradigma**: Monolith modern (Inertia.js bridge, single codebase, single process).
+- **Paradigma**: Monolith modern (Inertia.js bridge, single codebase, single process, decoupled-ready).
 - **Backend**: Laravel 13.x (PHP 8.5+)
-- **Frontend**: React 18+/19 via Inertia.js (SPA behavior, zero REST boilerplate).
+- **Frontend**: React 18+/19 via Inertia.js (SPA behavior, zero REST boilerplate, TypeScript).
 - **Styling**: Tailwind CSS.
 - **Database**: SQLite (default / local development), MySQL/PostgreSQL (production ready).
 - **Asset Processing**: Intervention Image v3 (auto-generate thumbnail + WebP optimization).
@@ -14,18 +14,22 @@ Platform showcase dan sharing gambar AI-generated dengan sistem kurasi/approval 
 
 ## 2. Core Constraints & Conventions
 
-### Backend (Laravel)
-- **Routing**: Seluruh routing di `routes/web.php`. Jangan buat API routes terpisah untuk web app.
-- **Controller Action**: Return data menggunakan `Inertia::render('PageName', [...])`.
+### Backend (Laravel - MVC + Service Layer)
+- **Routing**: Seluruh web routing di `routes/web.php`.
+- **Controller Action**: Controller bertindak sebagai orkestrator tipis (*thin controller*). Return data menggunakan `Inertia::render('PageName', [...])`.
+- **Service Layer**: Pisahkan logika bisnis berat (seperti upload gambar, kompresi WebP, dan moderasi) ke dalam class service di `app/Services/` (contoh: `PostService`, `ImageService`).
+- **Form Request**: Validasi input form wajib menggunakan dedicated Form Request di `app/Http/Requests/` (hindari `$request->validate()` langsung di controller) agar aturan validasi reusable jika nanti dibuka sebagai endpoint API.
+- **Data Transformation (API-Ready)**: Susun struktur data props secara rapi atau gunakan Eloquent API Resources agar bila suatu saat dipisah ke REST API murni, struktur JSON tidak perlu dirombak.
 - **Authorization**: Pakai Laravel Policy & Gate untuk membatasi aksi role `admin` vs `user`.
 - **File Handling**: Upload gambar wajib menghasilkan 2 file:
   1. `thumbnail` (resolusi sedang, WebP) untuk grid list.
   2. `original/optimized` untuk detail view.
 - **Database Transactions**: Gunakan `DB::transaction()` untuk operasi write yang melibatkan file upload dan record database.
 
-### Frontend (React + Inertia)
-- **Komponen**: Functional components dengan Tailwind CSS murni (hindari library CSS runtime-heavy).
-- **Form Handling**: Gunakan hook bawaan Inertia `useForm()` dari `@inertiajs/react` untuk state form, upload progress, dan validasi error bawaan Laravel.
+### Frontend (React + Inertia + TypeScript)
+- **Komponen**: Functional components dengan Tailwind CSS murni (analogi: seperti `@Composable` di Jetpack Compose dengan `Modifier` styling).
+- **TypeScript Types**: Definisikan interface/tipe data di `resources/js/types/` (seperti `data class` di Kotlin) untuk entitas `Post`, `User`, dan pagination agar kode type-safe.
+- **Form Handling**: Gunakan hook bawaan Inertia `useForm()` dari `@inertiajs/react` untuk state form, upload progress, dan error handling (mirip fungsi ViewModel di Android).
 - **Navigasi**: Gunakan `<Link href="...">` dari `@inertiajs/react` (hindari tag `<a href="...">` untuk navigasi internal).
 - **Code Style**:
   - Simpan pages di `resources/js/Pages/`
@@ -34,7 +38,17 @@ Platform showcase dan sharing gambar AI-generated dengan sistem kurasi/approval 
 
 ---
 
-## 3. Database Schema Specification
+## 3. Communication & Developer Guidance Rule (CRITICAL)
+- **Target Pengembang**: User adalah **Android Programmer (Kotlin, Jetpack Compose, XML, Gradle)** yang baru pertama kali menyentuh ekosistem Web (npm, React, Vite, Inertia, Laravel).
+- **Kewajiban Agen**:
+  1. Pada setiap langkah pembuatan atau perubahan kode, **sajikan ringkasan fungsi kodenya** secara singkat dan jelas.
+  2. Sertakan **analogi Android** (misalnya membandingkan `package.json` dengan `build.gradle`, React Component dengan `@Composable`, `useForm()` dengan `ViewModel`, Tailwind dengan `Modifier`, Vite dengan Gradle build tools).
+  3. Jelaskan perintah terminal yang dijalankan (misal fungsi `artisan`, `npm`, atau `composer`).
+  4. **Implementation Plan Wajib**: Sebelum membuat atau merombak kode yang banyak, penting, atau berdampak besar pada arsitektur, **wajib menyajikan Implementation Plan (rencana implementasi langkah-demi-langkah)** terlebih dahulu kepada user untuk disetujui.
+
+---
+
+## 4. Database Schema Specification
 
 ### `users`
 - `id` (bigint, pk)
@@ -67,13 +81,13 @@ Platform showcase dan sharing gambar AI-generated dengan sistem kurasi/approval 
 
 ---
 
-## 4. Key Workflows & Business Logic
+## 5. Key Workflows & Business Logic
 
 ### A. Upload & Processing (User)
 1. User mengisi form: file gambar + metadata prompt.
 2. Form submit via `useForm()` Inertia (multipart/form-data).
-3. Backend validasi (MIME type: jpg, png, webp; Max size: 10MB).
-4. Backend menyimpan gambar, membuat thumbnail via Intervention Image.
+3. Backend validasi via `StorePostRequest` (MIME type: jpg, png, webp; Max size: 10MB).
+4. `PostService` / `ImageService` menyimpan gambar, membuat thumbnail via Intervention Image.
 5. Record tersimpan dengan `status = pending`.
 6. Flash message: "Gambar berhasil diunggah dan menunggu moderasi admin."
 
@@ -91,22 +105,21 @@ Platform showcase dan sharing gambar AI-generated dengan sistem kurasi/approval 
 
 ---
 
-## 5. Implementation Roadmap for Agent
+## 6. Implementation Roadmap for Agent
 
-1. **Phase 1: Project Setup**
-   - Install Laravel Breeze / Inertia React stack.
-   - Setup Tailwind CSS & dependencies.
+1. **Phase 1: Project Setup** *(Selesai)*
+   - Laravel Breeze / Inertia React stack + Tailwind CSS & dependencies.
 2. **Phase 2: Database & Models**
    - Migrasi tabel `posts` & update kolom `role` pada `users`.
-   - Setup Model `Post`, relasi `User`, factory, dan seeder contoh data.
+   - Setup Model `Post`, relasi `User`, TypeScript interfaces, factory, dan seeder data dummy.
 3. **Phase 3: Image Upload & Storage Logic**
    - Pasang package `intervention/image`.
-   - Setup logic upload & pembuatan thumbnail WebP otomatis.
+   - Buat `ImageService` untuk upload & pembuatan thumbnail WebP otomatis.
 4. **Phase 4: Public Views (Explore & Detail)**
    - Buat Page `Posts/Index` (Grid explore + filter).
    - Buat Page `Posts/Show` (Detail view + metadata + tombol copy prompt).
 5. **Phase 5: User Upload & Profile**
-   - Buat Page `Posts/Create` (Form upload image & metadata).
+   - Buat Page `Posts/Create` (Form upload image & metadata via FormRequest & useForm).
    - Buat Page `Dashboard` (List kiriman milik user & status approval).
 6. **Phase 6: Admin Curation System**
    - Setup Authorization (Policy / Gate / Middleware role admin).
