@@ -1,10 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from '@inertiajs/react';
 import { ChevronLeft, ChevronRight, Copy, Check, Sparkles } from 'lucide-react';
+import SplitTextReveal from '@/Components/SplitTextReveal';
+import OrreryBackground from '@/Components/OrreryBackground';
 import { Post } from '@/types';
 
 interface HeroCarouselProps {
     posts?: Post[];
+    isRevealed?: boolean;
 }
 
 interface SpotlightItem {
@@ -66,7 +69,7 @@ const FALLBACK_SPOTLIGHTS: SpotlightItem[] = [
     },
 ];
 
-export default function HeroCarousel({ posts = [] }: HeroCarouselProps) {
+export default function HeroCarousel({ posts = [], isRevealed = true }: HeroCarouselProps) {
     // Transform incoming posts or merge with fallbacks to always guarantee 5 rich cards
     const items: SpotlightItem[] = posts.length >= 5
         ? posts.slice(0, 5).map((p) => ({
@@ -96,14 +99,47 @@ export default function HeroCarousel({ posts = [] }: HeroCarouselProps) {
     const [isHovered, setIsHovered] = useState(false);
     const total = items.length;
 
-    // Optional subtle auto-rotation when not hovered
+    // Entrance Animation Sequence: 'hidden' -> 'stacked' (1 kartu naik) -> 'spread' (mekar ke samping)
+    const [cardPhase, setCardPhase] = useState<'hidden' | 'stacked' | 'spread'>('hidden');
+    const [hasSpreadCompleted, setHasSpreadCompleted] = useState(false);
+
     useEffect(() => {
-        if (isHovered || total === 0) return;
+        if (!isRevealed) {
+            setCardPhase('hidden');
+            setHasSpreadCompleted(false);
+            return;
+        }
+
+        // Tahap 1: Naik dari bawah panggung sebagai 1 kartu tunggal di tengah
+        const riseTimer = setTimeout(() => {
+            setCardPhase('stacked');
+        }, 400);
+
+        // Tahap 2: Mekar / mengipas menyebar ke posisi kurva 3D (fan-out split)
+        const spreadTimer = setTimeout(() => {
+            setCardPhase('spread');
+        }, 1100);
+
+        // Tahap 3: Tandai sequence entrance tuntas (siap untuk navigasi reguler)
+        const completeTimer = setTimeout(() => {
+            setHasSpreadCompleted(true);
+        }, 1950);
+
+        return () => {
+            clearTimeout(riseTimer);
+            clearTimeout(spreadTimer);
+            clearTimeout(completeTimer);
+        };
+    }, [isRevealed]);
+
+    // Optional subtle auto-rotation when not hovered and entrance is completed
+    useEffect(() => {
+        if (isHovered || total === 0 || !hasSpreadCompleted) return;
         const timer = setInterval(() => {
             setActiveIndex((prev) => (prev + 1) % total);
         }, 6000);
         return () => clearInterval(timer);
-    }, [isHovered, total]);
+    }, [isHovered, total, hasSpreadCompleted]);
 
     const handlePrev = () => {
         setActiveIndex((prev) => (prev - 1 + total) % total);
@@ -111,6 +147,56 @@ export default function HeroCarousel({ posts = [] }: HeroCarouselProps) {
 
     const handleNext = () => {
         setActiveIndex((prev) => (prev + 1) % total);
+    };
+
+    // =========================================================================
+    // DRAG & SWIPE GESTURE ENGINE (Mouse Drag & Touch Swipe)
+    // =========================================================================
+    const [dragOffset, setDragOffset] = useState(0);
+    const [isDragging, setIsDragging] = useState(false);
+    const dragStartX = useRef<number | null>(null);
+    const hasMoved = useRef<boolean>(false);
+
+    const onPointerDown = (clientX: number) => {
+        if (!hasSpreadCompleted) return;
+        dragStartX.current = clientX;
+        hasMoved.current = false;
+        setIsDragging(true);
+    };
+
+    const onPointerMove = (clientX: number) => {
+        if (dragStartX.current === null) return;
+        const delta = clientX - dragStartX.current;
+        if (Math.abs(delta) > 8) {
+            hasMoved.current = true;
+        }
+        // Memberikan sedikit resistensi fisik lembut (damping factor 0.38)
+        setDragOffset(delta * 0.38);
+    };
+
+    const onPointerUp = () => {
+        if (dragStartX.current !== null) {
+            // Threshold geser (jika digeser lebih dari 28px, ganti slide)
+            if (dragOffset < -28) {
+                handleNext();
+            } else if (dragOffset > 28) {
+                handlePrev();
+            }
+        }
+        dragStartX.current = null;
+        setDragOffset(0);
+        setIsDragging(false);
+    };
+
+    const handleCardClick = (index: number) => {
+        // Jika gestur yang dilakukan adalah drag/geser, jangan picu aksi klik
+        if (hasMoved.current) {
+            hasMoved.current = false;
+            return;
+        }
+
+        // Klik kartu samping -> Geser kartu tersebut ke posisi tengah
+        setActiveIndex(index);
     };
 
     const handleCopy = (e: React.MouseEvent, item: SpotlightItem) => {
@@ -135,21 +221,59 @@ export default function HeroCarousel({ posts = [] }: HeroCarouselProps) {
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
-            {/* Header & Tagline (Voyager2 editorial style) */}
-            <div className="max-w-4xl mx-auto text-center px-4 mb-10 md:mb-14">
-                <p className="text-[11px] font-mono uppercase tracking-[0.3em] text-neutral-400 mb-4">
-                    Editorial Curated Showcase
-                </p>
-                <h1 className="text-3xl sm:text-5xl md:text-6xl font-serif font-normal text-white tracking-tight leading-[1.15] max-w-2xl mx-auto">
-                    Selected and popular posts on Kato right now
-                </h1>
-                <p className="mt-4 text-xs sm:text-sm text-neutral-400 font-light max-w-lg mx-auto leading-relaxed">
-                    Explore meticulously crafted generative artwork paired with verified prompts, seeds, and technical parameters.
-                </p>
+            {/* Astronomical Orrery / Mechanical Clock Background */}
+            <OrreryBackground isRevealed={isRevealed} />
+
+            {/* Header & Tagline (Voyager2 editorial style with Split Text Motion) */}
+            <div className="relative z-10 max-w-4xl mx-auto text-center px-4 mb-10 md:mb-14">
+                {/* 1. Badge Top Tag */}
+                <SplitTextReveal
+                    text="Editorial Curated Showcase"
+                    trigger={isRevealed}
+                    delay={180}
+                    stagger={30}
+                    duration={700}
+                    as="p"
+                    className="text-[11px] font-mono uppercase tracking-[0.3em] text-neutral-400 mb-4"
+                />
+
+                {/* 2. Main Hero Heading */}
+                <SplitTextReveal
+                    text="Selected and popular posts on Kato right now"
+                    trigger={isRevealed}
+                    delay={320}
+                    stagger={35}
+                    duration={850}
+                    as="h1"
+                    subtleRotate={true}
+                    className="text-3xl sm:text-5xl md:text-6xl font-serif font-normal text-white tracking-tight leading-[1.15] max-w-2xl mx-auto"
+                />
+
+                {/* 3. Subtitle / Description Paragraph */}
+                <SplitTextReveal
+                    text="Explore meticulously crafted generative artwork paired with verified prompts, seeds, and technical parameters."
+                    trigger={isRevealed}
+                    delay={650}
+                    stagger={18}
+                    duration={750}
+                    as="p"
+                    className="mt-4 text-xs sm:text-sm text-neutral-400 font-light max-w-lg mx-auto leading-relaxed"
+                />
             </div>
 
-            {/* 3D Curved Perspective Stage Container */}
-            <div className="relative h-[480px] sm:h-[540px] md:h-[600px] w-full max-w-7xl mx-auto flex items-center justify-center [perspective:1400px]">
+            {/* 3D Curved Perspective Stage Container (Mendukung Mouse Drag & Touch Swipe) */}
+            <div
+                onMouseDown={(e) => onPointerDown(e.clientX)}
+                onMouseMove={(e) => onPointerMove(e.clientX)}
+                onMouseUp={onPointerUp}
+                onMouseLeave={onPointerUp}
+                onTouchStart={(e) => onPointerDown(e.touches[0].clientX)}
+                onTouchMove={(e) => onPointerMove(e.touches[0].clientX)}
+                onTouchEnd={onPointerUp}
+                className={`relative z-10 h-[480px] sm:h-[540px] md:h-[600px] w-full max-w-7xl mx-auto flex items-center justify-center [perspective:1400px] select-none ${
+                    isDragging ? 'cursor-grabbing' : 'cursor-grab'
+                }`}
+            >
                 <div className="relative w-full h-full flex items-center justify-center [transform-style:preserve-3d]">
                     {items.map((item, index) => {
                         const offset = getOffset(index);
@@ -205,20 +329,66 @@ export default function HeroCarousel({ posts = [] }: HeroCarouselProps) {
                             opacity = 0.55;
                         }
 
+                        // Dynamic 3D transform during entrance sequence vs normal carousel mode
+                        let curTranslateX = translateX;
+                        let curTranslateY = 0;
+                        let curTranslateZ = translateZ;
+                        let curRotateY = rotateY;
+                        let curScale = scale;
+                        let curOpacity = opacity;
+
+                        if (cardPhase === 'hidden') {
+                            curTranslateX = 0;
+                            curTranslateY = 150;
+                            curTranslateZ = 0;
+                            curRotateY = 0;
+                            curScale = 0.92;
+                            curOpacity = 0;
+                        } else if (cardPhase === 'stacked') {
+                            curTranslateX = 0;
+                            curTranslateY = 0;
+                            curTranslateZ = isCenter ? 60 : 0;
+                            curRotateY = 0;
+                            curScale = isCenter ? 1.05 : 0.95;
+                            // 1 Kartu tengah tampil utuh, kartu samping bersembunyi di belakangnya
+                            curOpacity = isCenter ? 1 : 0;
+                        } else {
+                            // 'spread' (fan-out split) + respon real-time terhadap drag mouse/touch
+                            curTranslateX = translateX + dragOffset;
+                            curTranslateY = 0;
+                            curTranslateZ = translateZ;
+                            curRotateY = rotateY + dragOffset * 0.035;
+                            curScale = scale;
+                            curOpacity = opacity;
+                        }
+
+                        let transitionStyle = isDragging
+                            ? 'none' // Nol latency saat jari/mouse sedang menggeser
+                            : 'transform 600ms cubic-bezier(0.22, 1, 0.36, 1), opacity 600ms ease, box-shadow 600ms ease';
+
+                        if (!hasSpreadCompleted) {
+                            if (cardPhase === 'hidden' || cardPhase === 'stacked') {
+                                transitionStyle = 'transform 750ms cubic-bezier(0.16, 1, 0.3, 1), opacity 500ms ease';
+                            } else if (cardPhase === 'spread') {
+                                // Durasi saat kartu mekar mengipas menyebar ke samping
+                                transitionStyle = 'transform 850ms cubic-bezier(0.16, 1, 0.3, 1), opacity 700ms ease, box-shadow 600ms ease';
+                            }
+                        }
+
                         // Responsive adjustment for smaller mobile screens
                         const style3D: React.CSSProperties = {
-                            transform: `translateX(${translateX}px) translateZ(${translateZ}px) rotateY(${rotateY}deg) scale(${scale})`,
+                            transform: `translateY(${curTranslateY}px) translateX(${curTranslateX}px) translateZ(${curTranslateZ}px) rotateY(${curRotateY}deg) scale(${curScale})`,
                             zIndex,
-                            opacity,
-                            transition: 'transform 600ms cubic-bezier(0.22, 1, 0.36, 1), opacity 600ms ease, box-shadow 600ms ease',
+                            opacity: curOpacity,
+                            transition: transitionStyle,
                         };
 
                         return (
                             <div
                                 key={item.id}
-                                onClick={() => setActiveIndex(index)}
+                                onClick={() => handleCardClick(index)}
                                 style={style3D}
-                                className={`absolute w-[240px] sm:w-[280px] md:w-[320px] h-[380px] sm:h-[440px] md:h-[500px] rounded-[28px] overflow-hidden cursor-pointer bg-neutral-900 border transition-colors group shadow-2xl ${
+                                className={`absolute w-[240px] sm:w-[280px] md:w-[320px] h-[380px] sm:h-[440px] md:h-[500px] rounded-[28px] overflow-hidden bg-neutral-900 border transition-all duration-500 ease-out group shadow-2xl cursor-pointer ${
                                     isCenter
                                         ? 'border-neutral-500/80 shadow-white/5 ring-1 ring-white/10'
                                         : 'border-neutral-800/80 hover:border-neutral-600'
@@ -228,28 +398,30 @@ export default function HeroCarousel({ posts = [] }: HeroCarouselProps) {
                                 <img
                                     src={item.image_url}
                                     alt={item.title}
-                                    className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                                    className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105 pointer-events-none"
                                     loading="lazy"
                                 />
 
-                                {/* Top Badge & Copy Prompt Action */}
+                                {/* Top Badge & Action Icons */}
                                 <div className="absolute top-4 inset-x-4 flex items-center justify-between z-10">
                                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-mono tracking-wider bg-black/60 backdrop-blur-md text-white border border-white/15">
                                         <Sparkles className="w-3 h-3 text-neutral-300" />
                                         {item.ai_model}
                                     </span>
 
-                                    <button
-                                        onClick={(e) => handleCopy(e, item)}
-                                        title="Salin Prompt"
-                                        className="p-2 rounded-full bg-black/60 backdrop-blur-md text-neutral-300 hover:text-white hover:bg-neutral-800 border border-white/15 transition-all shadow-md active:scale-90"
-                                    >
-                                        {copiedId === item.id ? (
-                                            <Check className="w-3.5 h-3.5 text-emerald-400" />
-                                        ) : (
-                                            <Copy className="w-3.5 h-3.5" />
-                                        )}
-                                    </button>
+                                    <div className="flex items-center gap-1.5">
+                                        <button
+                                            onClick={(e) => handleCopy(e, item)}
+                                            title="Salin Prompt"
+                                            className="p-2 rounded-full bg-black/60 backdrop-blur-md text-neutral-300 hover:text-white hover:bg-neutral-800 border border-white/15 transition-all shadow-md active:scale-90"
+                                        >
+                                            {copiedId === item.id ? (
+                                                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                            ) : (
+                                                <Copy className="w-3.5 h-3.5" />
+                                            )}
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {/* Dark Gradient Vignette Overlay (Voyager2 Style) */}
@@ -287,21 +459,35 @@ export default function HeroCarousel({ posts = [] }: HeroCarouselProps) {
                 <button
                     onClick={handlePrev}
                     aria-label="Previous artwork"
-                    className="absolute left-4 sm:left-8 z-40 p-3 rounded-full bg-black/70 backdrop-blur-md text-white border border-neutral-800 hover:border-neutral-600 hover:bg-neutral-900 transition active:scale-95 shadow-lg"
+                    className={`absolute left-4 sm:left-8 z-40 p-3 rounded-full bg-black/70 backdrop-blur-md text-white border border-neutral-800 hover:border-neutral-600 hover:bg-neutral-900 transition-all duration-700 active:scale-95 shadow-lg ${
+                        cardPhase === 'spread'
+                            ? 'opacity-100 pointer-events-auto'
+                            : 'opacity-0 pointer-events-none'
+                    }`}
                 >
                     <ChevronLeft className="w-5 h-5" />
                 </button>
                 <button
                     onClick={handleNext}
                     aria-label="Next artwork"
-                    className="absolute right-4 sm:right-8 z-40 p-3 rounded-full bg-black/70 backdrop-blur-md text-white border border-neutral-800 hover:border-neutral-600 hover:bg-neutral-900 transition active:scale-95 shadow-lg"
+                    className={`absolute right-4 sm:right-8 z-40 p-3 rounded-full bg-black/70 backdrop-blur-md text-white border border-neutral-800 hover:border-neutral-600 hover:bg-neutral-900 transition-all duration-700 active:scale-95 shadow-lg ${
+                        cardPhase === 'spread'
+                            ? 'opacity-100 pointer-events-auto'
+                            : 'opacity-0 pointer-events-none'
+                    }`}
                 >
                     <ChevronRight className="w-5 h-5" />
                 </button>
             </div>
 
             {/* Indicator Dots */}
-            <div className="flex items-center justify-center gap-2 mt-4">
+            <div
+                className={`relative z-10 flex items-center justify-center gap-2 mt-4 transition-all duration-700 ${
+                    cardPhase === 'spread'
+                        ? 'opacity-100 translate-y-0'
+                        : 'opacity-0 translate-y-2'
+                }`}
+            >
                 {items.map((_, idx) => (
                     <button
                         key={idx}

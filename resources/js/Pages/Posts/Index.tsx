@@ -77,7 +77,7 @@ export default function Index({ posts, featuredPosts = [], filters, availableMod
                 }`}
             >
                 {/* 1. Hero 3D Perspective Curved Carousel Section */}
-                <HeroCarousel posts={featuredPosts} />
+                <HeroCarousel posts={featuredPosts} isRevealed={isRevealed} />
 
                 {/* 2. AI Models Ecosystem Strip */}
                 <AiModelsSection
