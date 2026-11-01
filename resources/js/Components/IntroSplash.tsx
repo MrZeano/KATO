@@ -23,13 +23,14 @@ export default function IntroSplash({ onRevealStart, onComplete }: IntroSplashPr
         if (hasStartedRef.current) return;
         hasStartedRef.current = true;
 
-        // 1. Counter Animation: 0 -> 100% with progressive easing
+        // 1. Counter Animation: 0 -> 100% with progressive easing (Tepat 2.0 detik)
         const startTime = Date.now();
-        const duration = 3000; // 1.4 detik total waktu counting
+        const duration = 2000;
 
         let splitTimer: ReturnType<typeof setTimeout>;
         let doneTimer: ReturnType<typeof setTimeout>;
 
+        // Interval 40ms (~25 FPS update rate): sangat halus di mata manusia namun memangkas 50%+ CPU re-render
         const interval = setInterval(() => {
             const elapsed = Date.now() - startTime;
             const progress = Math.min(elapsed / duration, 1);
@@ -43,19 +44,19 @@ export default function IntroSplash({ onRevealStart, onComplete }: IntroSplashPr
                 setCount(100);
                 setPhase('ready');
 
-                // 2. Pause sebentar di 100% (Zajno aesthetic pause), lalu picu curtain split
+                // 2. Pause singkat di 100% (200ms), lalu picu curtain split
                 splitTimer = setTimeout(() => {
                     setPhase('splitting');
                     onRevealStartRef.current?.();
-                }, 350);
+                }, 200);
 
-                // 3. Unmount dari DOM setelah animasi tirai tuntas
+                // 3. Unmount dari DOM setelah animasi tirai tuntas (900ms)
                 doneTimer = setTimeout(() => {
                     setPhase('done');
                     onCompleteRef.current?.();
-                }, 1400);
+                }, 900);
             }
-        }, 20);
+        }, 40);
 
         return () => {
             clearInterval(interval);
@@ -77,7 +78,7 @@ export default function IntroSplash({ onRevealStart, onComplete }: IntroSplashPr
                 Meluncur keluar ke sisi kiri saat splitting
                ======================================================== */}
             <div
-                className={`absolute top-0 bottom-0 left-0 w-1/2 bg-black border-r border-neutral-800 transition-transform duration-[950ms] ease-[cubic-bezier(0.77,0,0.175,1)] will-change-transform ${isSplitting ? '-translate-x-full' : 'translate-x-0'
+                className={`absolute top-0 bottom-0 left-0 w-1/2 bg-black border-r border-neutral-800 transition-transform duration-[800ms] ease-[cubic-bezier(0.77,0,0.175,1)] will-change-transform ${isSplitting ? '-translate-x-full' : 'translate-x-0'
                     }`}
             />
 
@@ -86,7 +87,7 @@ export default function IntroSplash({ onRevealStart, onComplete }: IntroSplashPr
                 Meluncur keluar ke sisi kanan saat splitting
                ======================================================== */}
             <div
-                className={`absolute top-0 bottom-0 right-0 w-1/2 bg-black border-l border-neutral-800 transition-transform duration-[950ms] ease-[cubic-bezier(0.77,0,0.175,1)] will-change-transform ${isSplitting ? 'translate-x-full' : 'translate-x-0'
+                className={`absolute top-0 bottom-0 right-0 w-1/2 bg-black border-l border-neutral-800 transition-transform duration-[800ms] ease-[cubic-bezier(0.77,0,0.175,1)] will-change-transform ${isSplitting ? 'translate-x-full' : 'translate-x-0'
                     }`}
             />
 

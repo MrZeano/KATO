@@ -34,10 +34,14 @@ export default function Index({ posts, featuredPosts = [], filters, availableMod
         setSelectedModel(newModel);
         applyFilters(search, newModel);
 
-        // Smooth scroll to feed section if clicked from models section
+        // Smooth scroll to feed section via Lenis momentum scroll
         const feedElement = document.getElementById('explore');
         if (feedElement) {
-            feedElement.scrollIntoView({ behavior: 'smooth' });
+            if (typeof window !== 'undefined' && (window as any).lenis) {
+                (window as any).lenis.scrollTo(feedElement, { offset: -80 });
+            } else {
+                feedElement.scrollIntoView({ behavior: 'smooth' });
+            }
         }
     };
 

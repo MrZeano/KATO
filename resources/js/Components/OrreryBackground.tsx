@@ -27,6 +27,7 @@ export default function OrreryBackground({ isRevealed = true }: OrreryBackground
                 // Masking radial halus di pinggiran agar lingkaran menyatu mulus dengan kegelapan layar
                 maskImage: 'radial-gradient(circle at center, black 45%, rgba(0,0,0,0.5) 70%, transparent 95%)',
                 WebkitMaskImage: 'radial-gradient(circle at center, black 45%, rgba(0,0,0,0.5) 70%, transparent 95%)',
+                contain: 'paint',
             }}
             aria-hidden="true"
         >
@@ -65,29 +66,10 @@ export default function OrreryBackground({ isRevealed = true }: OrreryBackground
 
             <svg
                 viewBox="0 0 1000 1000"
-                className="w-[880px] sm:w-[1100px] md:w-[1300px] h-[880px] sm:h-[1100px] md:h-[1300px] max-w-none text-white will-change-transform"
+                className="w-[880px] sm:w-[1100px] md:w-[1300px] h-[880px] sm:h-[1100px] md:h-[1300px] max-w-none text-white will-change-transform transform-gpu"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
             >
-                {/* Filter Glow Neon Putih untuk Berkas Cahaya yang Melintas */}
-                <defs>
-                    <filter id="whiteGlow" x="-30%" y="-30%" width="160%" height="160%">
-                        <feGaussianBlur stdDeviation="3.5" result="blur" />
-                        <feMerge>
-                            <feMergeNode in="blur" />
-                            <feMergeNode in="SourceGraphic" />
-                        </feMerge>
-                    </filter>
-                    <filter id="whiteGlowStrong" x="-50%" y="-50%" width="200%" height="200%">
-                        <feGaussianBlur stdDeviation="6" result="blur1" />
-                        <feGaussianBlur stdDeviation="2" result="blur2" />
-                        <feMerge>
-                            <feMergeNode in="blur1" />
-                            <feMergeNode in="blur2" />
-                            <feMergeNode in="SourceGraphic" />
-                        </feMerge>
-                    </filter>
-                </defs>
 
                 {/* ==========================================================
                     LAYER 1: STATIC BACKGROUND GEOMETRY (Garis Statis Abu Gelap)
@@ -235,7 +217,8 @@ export default function OrreryBackground({ isRevealed = true }: OrreryBackground
                     />
 
                     {/* Node Planet di sepanjang Needle (seperti manik-manik planet pada gambar) */}
-                    <circle cx="500" cy="65" r="7" fill="white" filter="url(#whiteGlow)" opacity="0.8" />
+                    <circle cx="500" cy="65" r="11" fill="rgba(255,255,255,0.18)" />
+                    <circle cx="500" cy="65" r="7" fill="white" opacity="0.9" style={{ filter: 'drop-shadow(0 0 4px rgba(255,255,255,0.9))' }} />
                     <circle cx="500" cy="180" r="16" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
                     <circle cx="500" cy="270" r="10" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.35)" strokeWidth="1" />
                     <circle cx="500" cy="350" r="5" fill="white" opacity="0.6" />
@@ -259,6 +242,21 @@ export default function OrreryBackground({ isRevealed = true }: OrreryBackground
                     {/* ==========================================================
                         ANIMASI 1: PULSA SINAR PUTIH RADIAL (Meluncur keluar di jarum)
                        ========================================================== */}
+                    {/* Halo pulse glow */}
+                    <line
+                        x1="500"
+                        y1="500"
+                        x2="500"
+                        y2="40"
+                        stroke="rgba(255,255,255,0.35)"
+                        strokeWidth="6"
+                        strokeLinecap="round"
+                        style={{
+                            strokeDasharray: '90 460',
+                            animation: 'orrery-radial-pulse 4.5s ease-out infinite',
+                        }}
+                    />
+                    {/* Core pulse beam */}
                     <line
                         x1="500"
                         y1="500"
@@ -267,10 +265,10 @@ export default function OrreryBackground({ isRevealed = true }: OrreryBackground
                         stroke="white"
                         strokeWidth="2.5"
                         strokeLinecap="round"
-                        filter="url(#whiteGlow)"
                         style={{
                             strokeDasharray: '90 460',
                             animation: 'orrery-radial-pulse 4.5s ease-out infinite',
+                            filter: 'drop-shadow(0 0 3px rgba(255,255,255,0.9))',
                         }}
                     />
                 </g>
@@ -279,6 +277,20 @@ export default function OrreryBackground({ isRevealed = true }: OrreryBackground
                     LAYER 5: THE WHITE TRAVELING BEAMS (Animasi Cahaya Putih Berjalan Melingkar)
                    ========================================================== */}
                 {/* 1. Berkas Cahaya Putih Meluncur di Orbit Luar (r = 380) */}
+                {/* Halo glow stroke di balik sinar */}
+                <circle
+                    cx="500"
+                    cy="500"
+                    r="380"
+                    stroke="rgba(255,255,255,0.25)"
+                    strokeWidth="7"
+                    strokeLinecap="round"
+                    style={{
+                        strokeDasharray: '160 2227',
+                        animation: 'orrery-beam-outer 8s linear infinite',
+                    }}
+                />
+                {/* Core bright beam */}
                 <circle
                     cx="500"
                     cy="500"
@@ -286,25 +298,39 @@ export default function OrreryBackground({ isRevealed = true }: OrreryBackground
                     stroke="white"
                     strokeWidth="2.5"
                     strokeLinecap="round"
-                    filter="url(#whiteGlowStrong)"
                     style={{
-                        strokeDasharray: '160 2227', // Panjang berkas 160px, celah 2227px
+                        strokeDasharray: '160 2227',
                         animation: 'orrery-beam-outer 8s linear infinite',
+                        filter: 'drop-shadow(0 0 4px rgba(255,255,255,0.95))',
                     }}
                 />
 
                 {/* 2. Berkas Cahaya Putih Meluncur Berlawanan di Orbit Dalam (r = 250) */}
+                {/* Halo glow stroke */}
                 <circle
                     cx="500"
                     cy="500"
                     r="250"
-                    stroke="rgba(255,255,255,0.85)"
+                    stroke="rgba(255,255,255,0.2)"
+                    strokeWidth="5.5"
+                    strokeLinecap="round"
+                    style={{
+                        strokeDasharray: '110 1460',
+                        animation: 'orrery-beam-inner 10.5s linear infinite',
+                    }}
+                />
+                {/* Core beam */}
+                <circle
+                    cx="500"
+                    cy="500"
+                    r="250"
+                    stroke="rgba(255,255,255,0.9)"
                     strokeWidth="2"
                     strokeLinecap="round"
-                    filter="url(#whiteGlow)"
                     style={{
-                        strokeDasharray: '110 1460', // Panjang berkas 110px, celah 1460px
+                        strokeDasharray: '110 1460',
                         animation: 'orrery-beam-inner 10.5s linear infinite',
+                        filter: 'drop-shadow(0 0 3px rgba(255,255,255,0.85))',
                     }}
                 />
 
@@ -314,24 +340,30 @@ export default function OrreryBackground({ isRevealed = true }: OrreryBackground
                     cy="120"
                     r="3"
                     fill="white"
-                    filter="url(#whiteGlow)"
-                    style={{ animation: 'orrery-node-blink 3s ease-in-out infinite' }}
+                    style={{
+                        filter: 'drop-shadow(0 0 3px rgba(255,255,255,0.9))',
+                        animation: 'orrery-node-blink 3s ease-in-out infinite',
+                    }}
                 />
                 <circle
                     cx="790"
                     cy="500"
                     r="3.5"
                     fill="white"
-                    filter="url(#whiteGlow)"
-                    style={{ animation: 'orrery-node-blink 3.8s ease-in-out infinite 1.2s' }}
+                    style={{
+                        filter: 'drop-shadow(0 0 3px rgba(255,255,255,0.9))',
+                        animation: 'orrery-node-blink 3.8s ease-in-out infinite 1.2s',
+                    }}
                 />
                 <circle
                     cx="500"
                     cy="880"
                     r="3"
                     fill="white"
-                    filter="url(#whiteGlow)"
-                    style={{ animation: 'orrery-node-blink 4.2s ease-in-out infinite 2s' }}
+                    style={{
+                        filter: 'drop-shadow(0 0 3px rgba(255,255,255,0.9))',
+                        animation: 'orrery-node-blink 4.2s ease-in-out infinite 2s',
+                    }}
                 />
             </svg>
         </div>

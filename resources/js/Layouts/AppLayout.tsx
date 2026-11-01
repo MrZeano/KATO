@@ -1,6 +1,7 @@
-import { Link, usePage } from '@inertiajs/react';
+import { Link, usePage, router } from '@inertiajs/react';
 import { PropsWithChildren, useState, useEffect } from 'react';
 import { LayoutDashboard, Shield, LogIn, LogOut, Menu, X, Plus } from 'lucide-react';
+import Lenis from 'lenis';
 import { PageProps } from '@/types';
 
 interface AppLayoutProps extends PropsWithChildren {
@@ -18,10 +19,75 @@ export default function AppLayout({ children, title, delayNavbar = false }: AppL
         if (delayNavbar) {
             const timer = setTimeout(() => {
                 setNavVisible(true);
-            }, 2100);
+            }, 1800);
             return () => clearTimeout(timer);
         }
     }, [delayNavbar]);
+
+    // Inisialisasi Lenis Momentum / Inertia Smooth Scrolling
+    useEffect(() => {
+        const lenis = new Lenis({
+            duration: 1.2,
+            easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+            orientation: 'vertical',
+            gestureOrientation: 'vertical',
+            smoothWheel: true,
+            wheelMultiplier: 1.0,
+            touchMultiplier: 1.5,
+        });
+
+        let rafId: number;
+        function raf(time: number) {
+            lenis.raf(time);
+            rafId = requestAnimationFrame(raf);
+        }
+        rafId = requestAnimationFrame(raf);
+
+        // Reset scroll ke atas saat navigasi antar halaman Inertia
+        const removeNavigateListener = router.on('navigate', () => {
+            lenis.scrollTo(0, { immediate: true });
+        });
+
+        // Tangkap klik anchor internal (seperti #explore, #models, #why-prompt) agar meluncur halus
+        const handleAnchorClick = (e: MouseEvent) => {
+            const anchor = (e.target as HTMLElement).closest('a[href*="#"]');
+            if (!anchor) return;
+
+            const href = anchor.getAttribute('href');
+            if (!href) return;
+
+            const hashIndex = href.indexOf('#');
+            if (hashIndex === -1) return;
+
+            const hash = href.substring(hashIndex);
+            if (!hash || hash === '#') return;
+
+            const path = href.substring(0, hashIndex);
+            const currentPath = window.location.pathname;
+
+            if (path === '' || path === currentPath || (path === '/' && currentPath === '/')) {
+                const targetEl = document.querySelector(hash);
+                if (targetEl) {
+                    e.preventDefault();
+                    lenis.scrollTo(targetEl as HTMLElement, { offset: -80 });
+                    history.pushState(null, '', hash);
+                }
+            }
+        };
+
+        document.addEventListener('click', handleAnchorClick);
+
+        // Ekspos ke window agar komponen lain (seperti filter model di Index.tsx) dapat memanggil scrollTo
+        (window as any).lenis = lenis;
+
+        return () => {
+            cancelAnimationFrame(rafId);
+            removeNavigateListener();
+            document.removeEventListener('click', handleAnchorClick);
+            lenis.destroy();
+            delete (window as any).lenis;
+        };
+    }, []);
 
     return (
         <div className="min-h-screen bg-black text-neutral-100 flex flex-col font-sans selection:bg-neutral-800 selection:text-white antialiased">

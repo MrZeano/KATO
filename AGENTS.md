@@ -39,12 +39,16 @@ Platform showcase dan sharing gambar AI-generated dengan sistem kurasi/approval 
 ---
 
 ## 3. Communication & Developer Guidance Rule (CRITICAL)
-- **Target Pengembang**: User adalah **Android Programmer (Kotlin, Jetpack Compose, XML, Gradle)** yang baru pertama kali menyentuh ekosistem Web (npm, React, Vite, Inertia, Laravel).
 - **Kewajiban Agen**:
-  1. Pada setiap langkah pembuatan atau perubahan kode, **sajikan ringkasan fungsi kodenya** secara singkat dan jelas.
-  2. Sertakan **analogi Android** (misalnya membandingkan `package.json` dengan `build.gradle`, React Component dengan `@Composable`, `useForm()` dengan `ViewModel`, Tailwind dengan `Modifier`, Vite dengan Gradle build tools).
-  3. Jelaskan perintah terminal yang dijalankan (misal fungsi `artisan`, `npm`, atau `composer`).
-  4. **Implementation Plan Wajib**: Sebelum membuat atau merombak kode yang banyak, penting, atau berdampak besar pada arsitektur, **wajib menyajikan Implementation Plan (rencana implementasi langkah-demi-langkah)** terlebih dahulu kepada user untuk disetujui.
+  1. Pada setiap langkah pembuatan atau perubahan kode, **sajikan ringkasan fungsi kodenya** secara singkat, padat, dan jelas langsung ke poin teknis web.
+  2. **Tidak perlu menyertakan analogi Android di setiap chat** (kecuali jika user secara spesifik memintanya). Fokus langsung pada penjelasan teknis web stack (Laravel, React, Inertia, Tailwind).
+  3. Jelaskan perintah terminal yang dijalankan jika relevan (misal fungsi `artisan`, `npm`, atau `composer`).
+  4. **Implementation Plan Wajib (Antigravity Native Artifact)**:
+     - Sebelum membuat atau merombak kode yang banyak, penting, atau berdampak besar pada arsitektur, **wajib menyajikan Implementation Plan (rencana implementasi langkah-demi-langkah)** terlebih dahulu kepada user untuk disetujui.
+     - **Format Wajib Antigravity IDE**: Wajib menggunakan **Plan Artifact bawaan Antigravity IDE** (yaitu memanggil tool `write_file` ke direktori artifact `<appDataDir>\brain\<conversation-id>\plan.md` dengan parameter `ArtifactMetadata: { UserFacing: true, RequestFeedback: true, Summary: '...' }`).
+     - Dengan `RequestFeedback: true`, Antigravity IDE akan menampilkan card/panel interaktif bawaan secara native lengkap dengan tombol **"Proceed"** untuk dieksekusi oleh user.
+     - **Dilarang** menyajikan plan sebagai file manual di `docs/superpowers/plans/...` atau sekadar teks markdown panjang di chat tanpa menyertakan Artifact bawaan Antigravity.
+     - Setelah membuat atau memperbarui artifact plan, **jangan rangkum ulang seluruh isinya** di chat; cukup arahkan user ke artifact tersebut dan tanyakan konfirmasi/poin kunci yang membutuhkan feedback.
 
 ---
 
